@@ -1,5 +1,6 @@
 package jp.techacademy.sugimoto.takahiro.taskapp
 
+import android.R
 import android.content.Context
 import android.view.LayoutInflater
 import android.view.View
@@ -10,12 +11,9 @@ import java.text.SimpleDateFormat
 import java.util.*
 
 class TaskAdapter(context: Context): BaseAdapter() {
-    private val mLayoutInflater: LayoutInflater
+    private val mLayoutInflater: LayoutInflater = LayoutInflater.from(context)
     var taskList = mutableListOf<Task>()
 
-    init {
-        this.mLayoutInflater = LayoutInflater.from(context)
-    }
 
     override fun getCount(): Int {
         return taskList.size
@@ -29,20 +27,20 @@ class TaskAdapter(context: Context): BaseAdapter() {
         return taskList[position].id.toLong()
 
     }
-
+    //TaskApp 一覧画面　テキスト
     override fun getView(position: Int, convertView: View?, perent: ViewGroup?): View {
-        val view: View = convertView ?: mLayoutInflater.inflate(android.R.layout.simple_list_item_2, null)
+        val view: View = convertView ?: mLayoutInflater.inflate(R.layout.simple_list_item_2, null)
 
-        val textView1 = view.findViewById<TextView>(android.R.id.text1)
-        val textView2 = view.findViewById<TextView>(android.R.id.text2)
+        val textView1 = view.findViewById<TextView>(R.id.text1)
+        val textView2 = view.findViewById<TextView>(R.id.text2)
 
-        //後ほどTaskクラスから情報を取得するように変更する
-        textView1.text = taskList[position].title
-        //textView3.text?
+
+        textView1.text = "[${taskList[position].category}]${taskList[position].title}"
 
         val simpleDateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.JAPANESE)
         val date = taskList[position].date
         textView2.text =simpleDateFormat.format(date)
+
 
         return view
 

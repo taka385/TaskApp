@@ -1,5 +1,9 @@
 package jp.techacademy.sugimoto.takahiro.taskapp
 
+import android.app.AlarmManager
+import android.app.PendingIntent
+import android.content.Context
+import android.view.View
 import android.os.Bundle
 import android.support.v7.app.AppCompatActivity
 import io.realm.Realm
@@ -7,11 +11,15 @@ import io.realm.RealmChangeListener
 import io.realm.Sort
 import kotlinx.android.synthetic.main.activity_main.*
 import android.content.Intent
+import android.util.Log
 import android.support.v7.app.AlertDialog
+import kotlinx.android.synthetic.main.content_input.*
+
 
 const val EXTRA_TASK = "jp.techacademy.sugimoto.takahiro.taskapp.TASK"
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : AppCompatActivity(), View.OnClickListener {
+
     private lateinit var mRealm: Realm
     private val mRealmListener = object : RealmChangeListener<Realm> {
         override fun onChange(element: Realm) {
@@ -29,6 +37,9 @@ class MainActivity : AppCompatActivity() {
             val intent = Intent(this@MainActivity, InputActivity::class.java)
             startActivity(intent)
         }
+
+        search_button.setOnClickListener(this)
+
 
         // Realmの設定
         mRealm = Realm.getDefaultInstance()
@@ -57,12 +68,24 @@ class MainActivity : AppCompatActivity() {
             builder.setTitle("削除")
             builder.setMessage(task.title + "を削除しますか")
 
-            builder.setPositiveButton("OK"){_, _ ->
+            builder.setPositiveButton("OK") { _, _ ->
                 val results = mRealm.where(Task::class.java).equalTo("id", task.id).findAll()
 
                 mRealm.beginTransaction()
                 results.deleteAllFromRealm()
                 mRealm.commitTransaction()
+
+                val resultIntent = Intent(applicationContext, TaskAlarmReceiver::class.java)
+                val resultPendingIntent = PendingIntent.getBroadcast(
+                    this@MainActivity,
+                    task.id,
+                    resultIntent,
+                    PendingIntent.FLAG_UPDATE_CURRENT
+                )
+
+                val alarmManager = getSystemService(Context.ALARM_SERVICE) as AlarmManager
+                alarmManager.cancel(resultPendingIntent)
+
 
                 reloadListView()
             }
@@ -75,12 +98,15 @@ class MainActivity : AppCompatActivity() {
             true
         }
 
+
         reloadListView()
+
     }
 
     private fun reloadListView() {
         // Realmデータベースから、「全てのデータを取得して新しい日時順に並べた結果」を取得
-        val taskRealmResults = mRealm.where(Task::class.java).findAll().sort("date", Sort.DESCENDING)
+        val taskｄRealmResults =
+            mRealm.where(Task::class.java).findAll().sort("date", Sort.DESCENDING)
 
         // 上記の結果を、TaskList としてセットする
         mTaskAdapter.taskList = mRealm.copyFromRealm(taskRealmResults)
@@ -92,9 +118,35 @@ class MainActivity : AppCompatActivity() {
         mTaskAdapter.notifyDataSetChanged()
     }
 
+
+    //カテゴリー絞り込み
+    private fun categorySearch() {
+        val category = category_edit.text.toString()
+
+        // Realmデータベースから、入力されたカテゴリーのついているタスクを取得
+        val taskRealmResults =
+            mRealm.where(Task::class.java).equalTo("category", category).findAll()
+                .sort("date", Sort.DESCENDING)
+
+        // 上記の結果を、TaskList としてセットする
+        mTaskAdapter.taskList = mRealm.copyFromRealm(taskRealmResults)
+
+        // TaskのListView用のアダプタに渡す
+        listView1.adapter = mTaskAdapter
+
+        // 表示を更新するために、アダプターにデータが変更されたことを知らせる
+        mTaskAdapter.notifyDataSetChanged()
+    }
+
+    //検索ボタン押したら絞り込み作動
+    override fun onClick(v: View) {
+        categorySearch()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
 
         mRealm.close()
+
     }
 }

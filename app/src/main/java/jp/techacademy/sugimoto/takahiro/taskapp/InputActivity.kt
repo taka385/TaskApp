@@ -55,7 +55,7 @@ class InputActivity : AppCompatActivity() {
         setContentView(R.layout.activity_input)
 
         // ActionBarを設定する
-        val toolbar = findViewById<View>(R.id.toolbar) as Toolbar
+        val toolbar = findViewById<View>(R.id.input_toolbar) as Toolbar
         setSupportActionBar(toolbar)
         if (supportActionBar != null) {
             supportActionBar!!.setDisplayHomeAsUpEnabled(true)
@@ -70,8 +70,12 @@ class InputActivity : AppCompatActivity() {
         val intent = intent
         val taskId = intent.getIntExtra(EXTRA_TASK, -1)
         val realm = Realm.getDefaultInstance()
-        mTask = realm.where(Task::class.java).equalTo("id", taskId).findFirst()
-        realm.close()
+
+        realm.run{
+            mTask = realm.where(Task::class.java).equalTo("id", taskId).findFirst()
+            close()
+        }
+
 
         if (mTask == null) {
             // 新規作成の場合
@@ -85,6 +89,7 @@ class InputActivity : AppCompatActivity() {
             // 更新の場合
             title_edit_text.setText(mTask!!.title)
             content_edit_text.setText(mTask!!.contents)
+            category_edit_text.setText(mTask!!.category)
 
             val calendar = Calendar.getInstance()
             calendar.time = mTask!!.date
@@ -124,17 +129,25 @@ class InputActivity : AppCompatActivity() {
 
         val title = title_edit_text.text.toString()
         val content = content_edit_text.text.toString()
+        val category = category_edit_text.text.toString()
 
         mTask!!.title = title
         mTask!!.contents = content
+        mTask!!.category = category
+
+
         val calendar = GregorianCalendar(mYear, mMonth, mDay, mHour, mMinute)
         val date = calendar.time
         mTask!!.date = date
 
-        realm.copyToRealmOrUpdate(mTask!!)
-        realm.commitTransaction()
+        realm.run {
+            mTask!!.date = date
 
-        realm.close()
+            realm.copyToRealmOrUpdate(mTask!!)
+            realm.commitTransaction()
+
+            close()
+        }
 
         val resultIntent = Intent(applicationContext, TaskAlarmReceiver::class.java)
         resultIntent.putExtra(EXTRA_TASK, mTask!!.id)
